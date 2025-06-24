@@ -13,7 +13,9 @@
   <form id="searchForm">
     <fieldset>
       <label>Location</label>
-      <input type="text" name="location" required><br><br>
+      <select name="location" id="locationDropdown" required>
+        <option value="">Any</option>
+      </select>
 
       <label>Property Type</label>
       <select name="property_type" id="propertyTypeDropdown">
@@ -42,6 +44,7 @@
       .then(data => {
         const propTypeSelect = document.getElementById('propertyTypeDropdown');
         const bedroomSelect = document.getElementById('bedroomsDropdown');
+        const locationSelect = document.getElementById('locationDropdown');
 
         data.propertyTypes.forEach(type => {
           const opt = document.createElement('option');
@@ -56,6 +59,13 @@
           opt.textContent = count;
           bedroomSelect.appendChild(opt);
         });
+
+        data.locations.forEach(location => {
+          const opt = document.createElement('option');
+          opt.value = location;
+          opt.textContent = location;
+          locationSelect.appendChild(opt);
+        }); 
       });
 
     // Update listings title (NOT the form title)

@@ -26,7 +26,9 @@ async function start() {
   app.get('/api/options', async (req, res) => {
     const propertyTypes = await listings.distinct('property_type');
     const bedroomCounts = await listings.distinct('bedrooms');
+    const locations = await listings.distinct('address.market');
     res.json({
+      locations: locations.filter(Boolean).sort(),
       propertyTypes: propertyTypes.filter(Boolean).sort(),
       bedroomCounts: bedroomCounts.filter(n => n !== null).sort((a, b) => a - b)
     });
