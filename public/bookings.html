@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Booking Page</title>
+  <style>
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    input[type="text"], input[type="email"], input[type="date"] {
+      width: 100%;
+      padding: 6px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 16px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Let's book the property</h2>
+  <form id="bookingForm">
+    <fieldset>
+      <legend><strong><h3>Booking Details</h3></strong></legend>
+
+      <label>Check-in:</label>
+      <input type="date" name="startDate" required placeholder="Enter check-in date (dd/mm/yyyy)">
+
+      <label>Check-out:</label>
+      <input type="date" name="endDate" required placeholder="Enter check-out date (dd/mm/yyyy)">
+    </fieldset>
+
+    <fieldset>
+      <legend><strong><h3>Your Details</h3></strong></legend>
+
+      <label>Name:</label>
+      <input type="text" name="name" required placeholder="Enter your name (mandatory)">
+
+      <label>Email Address:</label>
+      <input type="email" name="email" required placeholder="Enter your email address (mandatory)">
+
+      <label>Mobile Number:</label>
+      <input type="text" name="mobile" required placeholder="Enter your mobile no (04xx xxx xxx) (mandatory)">
+
+      <label>Postal Address:</label>
+      <input type="text" name="postalAddress" placeholder="(optional) Provide your postal address.">
+
+      <label>Residential Address:</label>
+      <input type="text" name="homeAddress" required placeholder="Provide your residential address. (cannot be a post box address)">
+    </fieldset>
+
+    <button type="submit">Book Now</button>
+  </form>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const listingID = params.get('listing_id');
+
+  // Fetch listing directly from MongoDB
+  async function fetchListingDetails(id) {
+    const res = await fetch('/api/listing/' + id);
+    const data = await res.json();
+    return data;
+  }
+
+  // On page load, fetch and show listing info
+  let selectedListing;
+  fetchListingDetails(listingID).then(listing => {
+    if (!listing || !listing.name) {
+      alert("Listing not found.");
+      document.querySelector("form").style.display = "none";
+    } else {
+      selectedListing = listing;
+      const header = document.querySelector("h2");
+      const minNights = listing.minimum_nights || '1';
+      const maxNights = listing.maximum_nights || '30';
+      header.innerHTML += `
+      <br><small>Property: <strong>${listing.name}</strong> (ID: ${listing._id})</small>
+      <br><small style="font-size: smaller;">Minimum stay: ${minNights} nights, Maximum stay: ${maxNights} nights</small>`;
+    }
+  });
+
+  document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+
+    if (!selectedListing) {
+      alert("Listing not found.");
+      return;
+    }
+
+    data.listingID = selectedListing._id;
+    data.listingName = selectedListing.name;
+    data.listingURL = `https://www.airbnb.com/rooms/${selectedListing._id}`;
+
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    if (result.success) {
+      window.location.href = `/confirmation.html?bookingID=${result.bookingID}`;
+    } else {
+      alert(result.message || "Booking failed.");
+    }
+  });
+</script>
+</body>
+</html>

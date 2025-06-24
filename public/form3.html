@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Airbnb Homepage</title>
+</head>
+<body>
+  <h1>Airbnb Homepage</h1>
+
+  <!-- This always stays the same -->
+  <h3 id="searchTitle">Search Destinations</h3>
+
+  <form id="searchForm">
+    <fieldset>
+      <label>Location</label>
+      <input type="text" name="location" required><br><br>
+
+      <label>Property Type</label>
+      <select name="property_type" id="propertyTypeDropdown">
+        <option value="">Any</option>
+      </select><br><br>
+
+      <label>Number of Bedrooms</label>
+      <select name="bedrooms" id="bedroomsDropdown">
+        <option value="">Any</option>
+      </select><br><br>
+
+      <button type="reset">Reset</button>
+      <button type="submit">Submit</button>
+    </fieldset>
+  </form>
+
+  <!-- This is the listings title that will change -->
+  <h3 id="listingsTitle">Random Listings</h3>
+
+  <div id="listings"></div>
+
+  <script>
+    // Populate dropdowns
+    fetch('/api/options')
+      .then(res => res.json())
+      .then(data => {
+        const propTypeSelect = document.getElementById('propertyTypeDropdown');
+        const bedroomSelect = document.getElementById('bedroomsDropdown');
+
+        data.propertyTypes.forEach(type => {
+          const opt = document.createElement('option');
+          opt.value = type;
+          opt.textContent = type;
+          propTypeSelect.appendChild(opt);
+        });
+
+        data.bedroomCounts.forEach(count => {
+          const opt = document.createElement('option');
+          opt.value = count;
+          opt.textContent = count;
+          bedroomSelect.appendChild(opt);
+        });
+      });
+
+    // Update listings title (NOT the form title)
+    function updateListingsTitle(count, isSearch) {
+      const listingsTitle = document.getElementById('listingsTitle');
+      listingsTitle.textContent = isSearch
+        ? `${count} Listings That Match Your Preference`
+        : 'Random Listings';
+    }
+
+    // Format price safely
+    function formatPrice(priceObj) {
+      if (!priceObj) return 'N/A';
+      if (typeof priceObj === 'object' && priceObj.$numberDecimal) {
+        return priceObj.$numberDecimal;
+      }
+      return priceObj.toString();
+    }
+
+    function loadListings(listings, isSearch = false) {
+      updateListingsTitle(listings.length, isSearch);
+      const container = document.getElementById('listings');
+      container.innerHTML = '';
+
+      if (listings.length === 0) {
+        container.innerHTML = '<p>No listings found.</p>';
+        return;
+      }
+
+      listings.forEach(listing => {
+        const div = document.createElement('div');
+        const link = `<a href="/bookings.html?listing_id=${listing._id}" target="_blank">${listing.name}</a>`;
+        const price = formatPrice(listing.price);
+
+        div.innerHTML = `
+          <h4>${link}</h4>
+          <p>${listing.summary}</p>
+          <p><strong>Daily Rate:</strong> $${price}</p>
+          <p><strong>Rating:</strong> ${listing.review_scores_rating || 'N/A'}</p>
+          <hr>`;
+        container.appendChild(div);
+      });
+    }
+
+    // Load random listings on page load
+    fetch('/api/random-listings')
+      .then(res => res.json())
+      .then(data => loadListings(data, false));
+
+    // Handle form submission
+    document.getElementById('searchForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const results = await res.json();
+      loadListings(results, true);
+    });
+
+    // Handle reset
+    document.getElementById('searchForm').addEventListener('reset', function () {
+      setTimeout(() => {
+        fetch('/api/random-listings')
+          .then(res => res.json())
+          .then(data => loadListings(data, false));
+      }, 100);
+    });
+  </script>
+</body>
+</html>

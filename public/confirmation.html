@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Booking Confirmation</title>
+</head>
+<body>
+  <h2>Booking Confirmed</h2>
+  <div id="details">
+    <p>Loading summary...</p>
+  </div>
+  <a href="/">Return to Homepage</a>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const bookingID = params.get('bookingID');
+
+    async function loadBookingDetails() {
+      if (!bookingID) {
+        document.getElementById('details').innerHTML = '<p>Missing booking ID in URL.</p>';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/booking/' + bookingID);
+        const data = await res.json();
+
+        if (!data || !data.bookingID) {
+          document.getElementById('details').innerHTML = '<p>Booking not found.</p>';
+          return;
+        }
+
+        const checkIn = new Date(data.startDate);
+        const checkOut = new Date(data.endDate);
+        const nights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
+        const dailyRate = parseFloat(data.listing.price?.$numberDecimal || data.listing.price || 100);
+        const totalCost = (nights * dailyRate).toFixed(2);
+
+        document.getElementById('details').innerHTML = `
+          <p><strong>Booking ID:</strong> ${data.bookingID}</p>
+          <p><strong>Property:</strong> ${data.listing.name}</p>
+          <p><strong>Check-in:</strong> ${checkIn.toLocaleDateString()}</p>
+          <p><strong>Check-out:</strong> ${checkOut.toLocaleDateString()}</p>
+          <p><strong>Nights:</strong> ${nights}</p>
+          <p><strong>Client Email:</strong> ${data.clientEmail || 'N/A'}</p>
+          <p><strong>Estimated Total Price:</strong> $${totalCost}</p>
+        `;
+      } catch (err) {
+        console.error("Error loading booking:", err);
+        document.getElementById('details').innerHTML = '<p>Failed to load booking details.</p>';
+      }
+    }
+
+    loadBookingDetails();
+  </script>
+</body>
+</html>
